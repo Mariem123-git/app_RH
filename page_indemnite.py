@@ -45,22 +45,20 @@ def run(df):
     stats = {}
     indemnites_data = []
 
+
     for config_col, config in indemnites_config.items():
         for df_col in df.columns:
             if config_col.strip().lower() == df_col.strip().lower():
                 serie = pd.to_numeric(df[df_col], errors='coerce').dropna()
                 if not serie.empty:
                     total = serie.sum()
-                    moyenne = serie.mean()
-                    mediane = serie.median()
                     nb_employes = (serie > 0).sum()
                     pourcentage_beneficiaires = (nb_employes / len(df)) * 100 if len(df) > 0 else 0
 
                     stats[config_col] = {
                         'Total': total,
-                        'Moyenne': moyenne,
-                        'Nombre des employés concernés': nb_employes,
-                        'Pourcentage de bénéficiaires': pourcentage_beneficiaires,
+                        'Nombre': nb_employes,
+                        'Pourcentage': pourcentage_beneficiaires,
                         'color': config['color'],
                         'bg': config['bg']
                     }
@@ -68,13 +66,10 @@ def run(df):
                     indemnites_data.append({
                         'Indemnité': config_col.title(),
                         'Total': total,
-                        'Moyenne': moyenne,
-                        'Bénéficiaires': nb_employes,
-                        'Pourcentage': pourcentage_beneficiaires,
-                        'Color': config['color']
+                        'Nombre': nb_employes,
+                        'Pourcentage': pourcentage_beneficiaires
                     })
 
-    # 🟢 Affichage général
     if stats:
         st.markdown("""
             <div style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
@@ -83,94 +78,83 @@ def run(df):
                      Vue d'ensemble
                 </h2>
             </div>
-            """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
-        col1, col2, col3, col4 = st.columns(4)
+        col1, col2 = st.columns(2)
+        total_indemnites = sum([s['Total'] for s in stats.values()])
+        total_beneficiaires = sum([s['Nombre'] for s in stats.values()])
 
         with col1:
-            total_indemnites = sum([s['Total'] for s in stats.values()])
             st.markdown(f"""
                 <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                            padding: 20px; border-radius: 10px; text-align: center;
-                            box-shadow: 0 4px 15px rgba(102,126,234,0.2);">
-                    <h3 style="color: white; margin: 0;">Total indemnités</h3>
-                    <p style="color: white; font-size: 1.8em; margin: 10px 0 0 0;">
-                        {total_indemnites:,.0f} DH
-                    </p>
+                            padding: 20px; border-radius: 10px; text-align: center;">
+                    <h3 style="color: white;">Total indemnités</h3>
+                    <p style="color: white; font-size: 1.8em;">{total_indemnites:,.0f} DH</p>
                 </div>
-                """, unsafe_allow_html=True)
-
-        with col2:
-            moyenne_globale = sum([s['Moyenne'] for s in stats.values()]) / len(stats)
-            st.markdown(f"""
-                <div style="background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
-                            padding: 20px; border-radius: 10px; text-align: center;
-                            box-shadow: 0 4px 15px rgba(78,205,196,0.2);">
-                    <h3 style="color: white; margin: 0;">Moyenne globale</h3>
-                    <p style="color: white; font-size: 1.8em; margin: 10px 0 0 0;">
-                        {moyenne_globale:,.0f} DH
-                    </p>
-                </div>
-                """, unsafe_allow_html=True)
-
-        with col3:
-            total_beneficiaires = sum([s['Nombre des employés concernés'] for s in stats.values()])
-            st.markdown(f"""
-                <div style="background: linear-gradient(135deg, #feca57 0%, #ff9ff3 100%);
-                            padding: 20px; border-radius: 10px; text-align: center;
-                            box-shadow: 0 4px 15px rgba(254,202,87,0.2);">
-                    <h3 style="color: white; margin: 0;">Total bénéficiaires</h3>
-                    <p style="color: white; font-size: 1.8em; margin: 10px 0 0 0;">
-                        {total_beneficiaires}
-                    </p>
-                </div>
-                """, unsafe_allow_html=True)
-
-        with col4:
-            indemnite_populaire = max(stats.items(), key=lambda x: x[1]['Pourcentage de bénéficiaires'])
-            st.markdown(f"""
-                <div style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
-                            padding: 20px; border-radius: 10px; text-align: center;
-                            box-shadow: 0 4px 15px rgba(255,107,107,0.2);">
-                    <h3 style="color: white; margin: 0;"> Plus populaire</h3>
-                    <p style="color: white; font-size: 1.2em; margin: 10px 0 0 0;">
-                        {indemnite_populaire[0].title()}
-                    </p>
-                </div>
-                """, unsafe_allow_html=True)
-
-        # ------------------------------
-        st.markdown("""
-            <div style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-                        padding: 20px; border-radius: 10px; margin: 30px 0 20px 0;">
-                <h2 style="color: #2c3e50; text-align: center; margin: 0;">
-                     Détail par indemnité
-                </h2>
-            </div>
             """, unsafe_allow_html=True)
 
-        for col, stat in stats.items():
-            with st.expander(f" {col.title()}", expanded=True):
-                st.markdown(f"""
-                    <div style="background: {stat['bg']}; padding: 15px; border-radius: 8px; 
-                                border-left: 4px solid {stat['color']};">
-                    """, unsafe_allow_html=True)
+        with col2:
+            st.markdown(f"""
+                <div style="background: linear-gradient(135deg, #feca57 0%, #ff9ff3 100%);
+                            padding: 20px; border-radius: 10px; text-align: center;">
+                    <h3 style="color: white;">Total bénéficiaires</h3>
+                    <p style="color: white; font-size: 1.8em;">{total_beneficiaires}</p>
+                </div>
+            """, unsafe_allow_html=True)
 
-                c1, c2= st.columns(2)
-                with c1:
-                    st.markdown(f"""
-                       
-                        - Total: **{stat['Total']:,.2f} DH**
-                        - Moyenne: **{stat['Moyenne']:,.2f} DH**
-                        """)
-                with c2:
-                    st.markdown(f"""
-                        ** Bénéficiaires**
-                        - Nombre: **{stat['Nombre des employés concernés']}**
-                        - Pourcentage: **{stat['Pourcentage de bénéficiaires']:.1f}%**
-                        """)
+        st.markdown("""
+            <div style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+                        padding: 20px; border-radius: 10px; margin: 30px 0;">
+                <h2 style="color: #2c3e50; text-align: center;">Détail par indemnité</h2>
+            </div>
+        """, unsafe_allow_html=True)
+
+        nombre_de_mois = st.number_input("📅 Mois pour le calcul Transport :", min_value=1, value=1, step=1)
+
+        for col, stat in stats.items():
+            with st.expander(f"🔹 {col.title()}", expanded=True):
+                st.markdown(f"""
+                    <div style="background: {stat['bg']}; padding: 15px; border-radius: 8px;
+                                border-left: 4px solid {stat['color']};">
+                """, unsafe_allow_html=True)
+
+                c1, c2 = st.columns(2)
+
+                if 'licenciement' in col.lower():
+                    with c1:
+                        st.markdown(f"- Total: **{stat['Total']:,.2f} DH**")
+                    with c2:
+                        st.markdown(f"- Nombre licenciés: **{stat['Nombre']}**  \n- Pourcentage: **{stat['Pourcentage']:.1f}%**")
+
+                elif 'transport' in col.lower():
+                    total_mensuel = stat['Total'] / nombre_de_mois if nombre_de_mois > 0 else stat['Total']
+                    with c1:
+                        st.markdown(f"- Total mensuel: **{total_mensuel:,.2f} DH**")
+                    with c2:
+                        st.markdown(f"- Bénéficiaires: **{stat['Nombre']}**")
+
+                elif 'déplacement' in col.lower():
+                    with c1:
+                        st.markdown(f"- Total: **{stat['Total']:,.2f} DH**")
+                    with c2:
+                        st.markdown(f"- Bénéficiaires: **{stat['Nombre']}**")
+
+                elif 'représentation' in col.lower():
+                    with c1:
+                        st.markdown(f"- Total: **{stat['Total']:,.2f} DH**")
+                    with c2:
+                        st.markdown(f"- Bénéficiaires: **{stat['Nombre']}**")
+
+                elif 'panier' in col.lower():
+                    with c1:
+                        st.markdown(f"- Total: **{stat['Total']:,.2f} DH**")
+                    with c2:
+                        st.markdown(f"- Nombre de personnes: **{stat['Nombre']}**")
 
                 st.markdown("</div>", unsafe_allow_html=True)
+  
+
+  
 
 
 
