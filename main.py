@@ -23,7 +23,6 @@ if mot_de_passe != MOT_DE_PASSE_ATTENDU:
 
 # — Application principale —
 st.success("✅ Accès autorisé ! Bienvenue dans l'application RH sécurisée.")
-st.write("Voici ton contenu confidentiel...")
 authentifier()
 xls, uploaded_file = uploader_excel()
 
