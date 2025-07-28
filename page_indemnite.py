@@ -59,12 +59,6 @@ def run(df):
                     stats[config_col] = {
                         'Total': total,
                         'Moyenne': moyenne,
-                        'Médiane': mediane,
-                        'Écart-type': serie.std(),
-                        'Minimum': serie.min(),
-                        'Maximum': serie.max(),
-                        'Q1': serie.quantile(0.25),
-                        'Q3': serie.quantile(0.75),
                         'Nombre des employés concernés': nb_employes,
                         'Pourcentage de bénéficiaires': pourcentage_beneficiaires,
                         'color': config['color'],
@@ -75,7 +69,6 @@ def run(df):
                         'Indemnité': config_col.title(),
                         'Total': total,
                         'Moyenne': moyenne,
-                        'Médiane': mediane,
                         'Bénéficiaires': nb_employes,
                         'Pourcentage': pourcentage_beneficiaires,
                         'Color': config['color']
@@ -163,26 +156,18 @@ def run(df):
                                 border-left: 4px solid {stat['color']};">
                     """, unsafe_allow_html=True)
 
-                c1, c2, c3 = st.columns(3)
+                c1, c2= st.columns(2)
                 with c1:
                     st.markdown(f"""
-                        ** Montants**
-                        - Total: **{stat['Total']:,.2f} DH**
-                        - Moyenne: **{stat['Moyenne']:,.2f} DH**
-                        - Médiane: **{stat['Médiane']:,.2f} DH**
+                       
+                        - Total: **{stat['Total']:.,2f} DH**
+                        - Moyenne: **{stat['Moyenne']:.,2f} DH**
                         """)
                 with c2:
                     st.markdown(f"""
                         ** Bénéficiaires**
                         - Nombre: **{stat['Nombre des employés concernés']}**
                         - Pourcentage: **{stat['Pourcentage de bénéficiaires']:.1f}%**
-                        """)
-                with c3:
-                    st.markdown(f"""
-                        ** Statistiques**
-                        - Min: **{stat['Minimum']:,.2f} DH**
-                        - Max: **{stat['Maximum']:,.2f} DH**
-                        - Écart-type: **{stat['Écart-type']:,.2f} DH**
                         """)
 
                 st.markdown("</div>", unsafe_allow_html=True)
