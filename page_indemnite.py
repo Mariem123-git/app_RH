@@ -160,8 +160,8 @@ def run(df):
                 with c1:
                     st.markdown(f"""
                        
-                        - Total: **{stat['Total']:.,2f} DH**
-                        - Moyenne: **{stat['Moyenne']:.,2f} DH**
+                        - Total: **{stat['Total']:,.2f} DH**
+                        - Moyenne: **{stat['Moyenne']:,.2f} DH**
                         """)
                 with c2:
                     st.markdown(f"""
