@@ -249,6 +249,140 @@ def run(df):
                 <h3 style="color:white; margin:0;">📥 Télécharger les statistiques</h3>
             </div>
             """, unsafe_allow_html=True)
+        # 🚗 Section des employés avec voiture de fonction (TOUJOURS AFFICHÉE)
+        st.markdown("""
+               <div style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+                           padding: 20px; border-radius: 10px; margin: 30px 0 20px 0;">
+                   <h2 style="color: #2c3e50; text-align: center; margin: 0;">
+                       Employés avec voiture de fonction
+                   </h2>
+               </div>
+               """, unsafe_allow_html=True)
+
+        # Rechercher la colonne voiture
+        voiture_col = None
+        for col in df.columns:
+            if 'voiture' in col.lower():
+                voiture_col = col
+                break
+
+        # Initialiser les DataFrames pour l'export
+        df_voitures_display = pd.DataFrame()
+        repartition_voitures = pd.DataFrame()
+
+        if voiture_col is not None:
+            # Filtrer les employés qui ont une voiture (valeur non vide et non NaN)
+            df_voitures = df[df[voiture_col].notna() & (df[voiture_col] != '') & (
+                    df[voiture_col].astype(str).str.strip() != '')].copy()
+
+            if not df_voitures.empty:
+                # Créer un tableau des employés avec voiture
+                colonnes_importantes = []
+
+                # Chercher les colonnes importantes (nom, prénom, etc.)
+                for col in df.columns:
+                    col_lower = col.lower()
+                    if any(keyword in col_lower for keyword in ['nom', 'prénom', 'prenom', 'name', 'matricule', 'id']):
+                        colonnes_importantes.append(col)
+
+                # Ajouter la colonne voiture
+                colonnes_importantes.append(voiture_col)
+
+                # Créer le DataFrame des voitures
+                df_voitures_display = df_voitures[colonnes_importantes].copy()
+                df_voitures_display = df_voitures_display.reset_index(drop=True)
+
+                # Statistiques des voitures
+                col1, col2, col3 = st.columns(3)
+
+                with col1:
+                    st.markdown(f"""
+                           <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                       padding: 20px; border-radius: 10px; text-align: center;
+                                       box-shadow: 0 4px 15px rgba(102,126,234,0.2);">
+                               <h3 style="color: white; margin: 0;">Total employés</h3>
+                               <p style="color: white; font-size: 1.8em; margin: 10px 0 0 0;">
+                                   {len(df_voitures_display)}
+                               </p>
+                           </div>
+                           """, unsafe_allow_html=True)
+
+                with col2:
+                    pourcentage_voitures = (len(df_voitures_display) / len(df)) * 100 if len(df) > 0 else 0
+                    st.markdown(f"""
+                           <div style="background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+                                       padding: 20px; border-radius: 10px; text-align: center;
+                                       box-shadow: 0 4px 15px rgba(78,205,196,0.2);">
+                               <h3 style="color: white; margin: 0;">Pourcentage</h3>
+                               <p style="color: white; font-size: 1.8em; margin: 10px 0 0 0;">
+                                   {pourcentage_voitures:.1f}%
+                               </p>
+                           </div>
+                           """, unsafe_allow_html=True)
+
+                with col3:
+                    # Compter les types de voitures uniques
+                    types_voitures = df_voitures[voiture_col].nunique()
+                    st.markdown(f"""
+                           <div style="background: linear-gradient(135deg, #feca57 0%, #ff9ff3 100%);
+                                       padding: 20px; border-radius: 10px; text-align: center;
+                                       box-shadow: 0 4px 15px rgba(254,202,87,0.2);">
+                               <h3 style="color: white; margin: 0;">Types de voitures</h3>
+                               <p style="color: white; font-size: 1.8em; margin: 10px 0 0 0;">
+                                   {types_voitures}
+                               </p>
+                           </div>
+                           """, unsafe_allow_html=True)
+
+                # Afficher le tableau
+                st.markdown("""
+                       <div style="margin: 20px 0;">
+                           <h3 style="color: #2c3e50;">📋 Liste des employés avec voiture</h3>
+                       </div>
+                       """, unsafe_allow_html=True)
+
+                st.dataframe(
+                    df_voitures_display,
+                    use_container_width=True,
+                    hide_index=True
+                )
+
+                # Répartition par type de voiture
+                st.markdown("""
+                       <div style="margin: 20px 0;">
+                           <h3 style="color: #2c3e50;">Répartition par type de voiture</h3>
+                       </div>
+                       """, unsafe_allow_html=True)
+
+                repartition_voitures = df_voitures[voiture_col].value_counts().reset_index()
+                repartition_voitures.columns = ['Type de voiture', 'Nombre d\'employés']
+
+                st.dataframe(
+                    repartition_voitures,
+                    use_container_width=True,
+                    hide_index=True
+                )
+
+            else:
+                st.info("ℹ️ Aucun employé n'a de voiture de fonction attribuée.")
+        else:
+            st.warning("⚠️ Colonne 'voiture' non trouvée dans les données.")
+            st.info("📋 Colonnes disponibles : " + ", ".join(df.columns))
+
+        # Si aucune donnée d'indemnité n'est trouvée
+        if not stats:
+            st.warning("⚠️ Aucune donnée d'indemnité trouvée dans les colonnes disponibles")
+            st.info("📋 Colonnes disponibles : " + ", ".join(df.columns))
+
+        # ➡️ Téléchargement Excel avec toutes les données
+        df_stats = pd.DataFrame(indemnites_data) if indemnites_data else pd.DataFrame()
+
+        st.markdown("""
+               <div style="margin-top:30px; padding:20px; background:linear-gradient(135deg,#667eea 0%,#764ba2 50%);
+                           border-radius:10px; text-align:center;">
+                   <h3 style="color:white; margin:0;">📥 Télécharger les statistiques</h3>
+               </div>
+               """, unsafe_allow_html=True)
 
         import io
 
@@ -269,6 +403,13 @@ def run(df):
                                              in indemnites_data]
             })
             df_camembert.to_excel(writer, sheet_name='Données Camembert', index=False)
+            # Employés avec voiture (si disponibles)
+            if not df_voitures_display.empty:
+                df_voitures_display.to_excel(writer, sheet_name='Employés avec voiture', index=False)
+
+            # Répartition des voitures (si disponibles)
+            if not repartition_voitures.empty:
+                repartition_voitures.to_excel(writer, sheet_name='Répartition voitures', index=False)
 
         output.seek(0)
 
