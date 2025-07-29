@@ -1,12 +1,9 @@
-
 from utils import recherche_employe
 import pandas as pd
 import matplotlib.pyplot as plt
 import streamlit as st
 import numpy as np
 from uploader import uploader_excel
-
-
 
 
 def run(df, xls, uploaded_file):
@@ -88,30 +85,6 @@ def run(df, xls, uploaded_file):
                 text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
             }
 
-            /* Cartes pour top 5 employés */
-            .top-employee-card {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                padding: 15px;
-                border-radius: 10px;
-                margin: 8px 0;
-                color: white;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-
-            .top-employee-card .employee-name {
-                font-weight: bold;
-                font-size: 1.1em;
-            }
-
-            .top-employee-card .employee-prime {
-                font-size: 1.2em;
-                color: #fee140;
-                font-weight: bold;
-            }
-
             /* Graphiques avec fond coloré */
             .chart-container {
                 background: rgba(255,255,255,0.9);
@@ -176,24 +149,18 @@ def run(df, xls, uploaded_file):
             else:
                 return 0
 
-        def safe_mean(df, col):
-            if col in df.columns and df[col].notna().any():
-                return pd.to_numeric(df[col], errors='coerce').mean()
-            else:
-                return 0
-
-        # Calculs principaux
+        # Calculs principaux - TOTAUX au lieu de moyennes
         total_HS = safe_sum(df, 'Salaire des HS')
-        prime_rendement_moy = safe_mean(df, 'Prime de rendement')
-        prime_anciennete_moy = safe_mean(df, "Prime d'ancienneté")
-        prime_poste_moy = safe_mean(df, 'Prime de poste')
-        prime_salisseur_moy = safe_mean(df, 'Prime de Salissure')
+        total_prime_rendement = safe_sum(df, 'Prime de rendement')
+        total_prime_anciennete = safe_sum(df, "Prime d'ancienneté")
+        total_prime_poste = safe_sum(df, 'Prime de poste')
+        total_prime_salisseur = safe_sum(df, 'Prime de Salissure')
 
         total_primes = (
-                safe_sum(df, 'Prime de rendement') +
-                safe_sum(df, "Prime d'ancienneté") +
-                safe_sum(df, 'Prime de poste') +
-                safe_sum(df, 'Prime de Salissure')
+                total_prime_rendement +
+                total_prime_anciennete +
+                total_prime_poste +
+                total_prime_salisseur
         )
 
         if 'Heures suppl' in df.columns:
@@ -222,8 +189,8 @@ def run(df, xls, uploaded_file):
         with col3:
             st.markdown(f"""
                 <div class="paie-metric-card card-rendement">
-                    <h3> Prime de rendement moyen</h3>
-                    <p>{prime_rendement_moy:,.2f} DH</p>
+                    <h3> Total Prime de rendement</h3>
+                    <p>{total_prime_rendement:,.2f} DH</p>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -232,123 +199,105 @@ def run(df, xls, uploaded_file):
         with col4:
             st.markdown(f"""
                 <div class="paie-metric-card card-anciennete-prime">
-                    <h3>Prime d'ancienneté moyenne</h3>
-                    <p>{prime_anciennete_moy:,.2f} DH</p>
+                    <h3>Total Prime d'ancienneté</h3>
+                    <p>{total_prime_anciennete:,.2f} DH</p>
                 </div>
                 """, unsafe_allow_html=True)
 
         with col5:
             st.markdown(f"""
                 <div class="paie-metric-card card-poste">
-                    <h3> Prime de poste moyenne</h3>
-                    <p>{prime_poste_moy:,.2f} DH</p>
+                    <h3> Total Prime de poste</h3>
+                    <p>{total_prime_poste:,.2f} DH</p>
                 </div>
                 """, unsafe_allow_html=True)
 
         with col6:
             st.markdown(f"""
-                <div class="paie-metric-card card-total-primes">
-                    <h3> Total des primes moyens </h3>
-                    <p>{total_primes:,.2f} DH</p>
+                <div class="paie-metric-card card-rendement">
+                        <h3> Total Prime de Salissure</h3>
+                        <p>{total_prime_salisseur:,.2f} DH</p>
                 </div>
                 """, unsafe_allow_html=True)
+
         with col7:
             st.markdown(f"""
-                           <div class="paie-metric-card card-rendement">
-                               <h3> Prime de Salissure moyen</h3>
-                               <p>{prime_salisseur_moy:,.2f} DH</p>
-                           </div>
-                           """, unsafe_allow_html=True)
+                            <div class="paie-metric-card card-total-primes">
+                                <h3> Total de toutes les primes</h3>
+                                <p>{total_primes:,.2f} DH</p>
+                            </div>
+                            """, unsafe_allow_html=True)
 
-        # Fonction pour graphique camembert des primes + Top 5
         def plot_pie_primes_styled(df):
             primes = ['Prime de rendement', "Prime d'ancienneté", 'Prime de poste', 'Prime de Salissure']
             primes = [col for col in primes if col in df.columns]
-            if 'Noms & Prénoms' in df.columns and primes:
-                df['Primes totales'] = df[primes].sum(axis=1)
-                top_5 = df[['Noms & Prénoms', 'Primes totales']].sort_values(by='Primes totales', ascending=False).head(
-                    5)
-            else:
-                top_5 = pd.DataFrame(columns=['Noms & Prénoms', 'Primes totales'])
 
             if not primes:
                 st.markdown('<div class="custom-warning">⚠️ Aucune colonne de primes trouvée pour le graphique.</div>',
                             unsafe_allow_html=True)
                 return
 
-            moyennes, labels = [], []
+            # Calculer les TOTAUX pour chaque prime
+            totaux, labels = [], []
             for col in primes:
-                moyenne = pd.to_numeric(df[col], errors='coerce').dropna()
-                if not moyenne.empty:
-                    moyennes.append(moyenne.mean())
+                total = pd.to_numeric(df[col], errors='coerce').sum()
+                if total > 0:
+                    totaux.append(total)
                     labels.append(col.replace('Prime de ', '').replace("Prime d'", '').title())
 
-            if not moyennes:
+            if not totaux:
                 st.markdown('<div class="custom-warning">⚠️ Aucune donnée valide pour les primes.</div>',
                             unsafe_allow_html=True)
                 return
 
-            # Créer deux colonnes pour l'affichage
-            col1, col2 = st.columns([1, 1])
+            st.markdown('<div class="paie-section-header"><h2>📊 Répartition des Primes </h2></div>',
+                        unsafe_allow_html=True)
 
-            with col1:
-                # Top 5 employés avec le plus de primes
+            st.markdown('<div class="chart-container">', unsafe_allow_html=True)
 
-                st.markdown('<div class="paie-section-header"><h2> Top 5 Employés - Primes</h2></div>',
-                            unsafe_allow_html=True)
+            fig_pr, ax = plt.subplots(figsize=(10, 8))
+            fig_pr.patch.set_facecolor('#f0f2f6')
 
-                # Affichage stylisé du top 5
-                for i, (_, row) in enumerate(top_5.iterrows()):
-                    medal = "🥇" if i == 0 else "🥈" if i == 1 else "🥉" if i == 2 else f"{i + 1}."
-                    st.markdown(f"""
-                            <div class="top-employee-card">
-                                <div>
-                                    <span style="font-size: 1.2em; margin-right: 10px;">{medal}</span>
-                                    <span class="employee-name">{row['Noms & Prénoms']}</span>
-                                </div>
-                                <div class="employee-prime">{row['Primes totales']:,.2f} DH</div>
-                            </div>
-                            """, unsafe_allow_html=True)
+            colors = ['#667eea', '#f093fb', '#4facfe', '#43e97b', '#fa709a'][:len(totaux)]
 
-            with col2:
-                # Graphique camembert stylisé
-                st.markdown('<div class="chart-container">', unsafe_allow_html=True)
+            # Pie : % seulement
+            wedges, texts, autotexts = ax.pie(
+                totaux,
+                labels=None,
+                autopct='%1.1f%%',
+                startangle=90,
+                colors=colors,
+                shadow=True,
+                explode=[0.05] * len(totaux),
+                textprops={'fontsize': 11, 'fontweight': 'bold'}
+            )
 
-                fig_pr, ax = plt.subplots(figsize=(8, 8))
-                fig_pr.patch.set_facecolor('#f0f2f6')
+            # Remplacer les labels pour chaque part
+            for i, text in enumerate(texts):
+                text.set_text(labels[i])
 
-                # Couleurs personnalisées
-                colors = ['#667eea', '#f093fb', '#4facfe', '#43e97b', '#fa709a'][:len(moyennes)]
+            # Rendre % plus visibles
+            for autotext in autotexts:
+                autotext.set_color('white')
+                autotext.set_fontweight('bold')
 
-                # Créer le camembert avec des effets visuels
-                wedges, texts, autotexts = ax.pie(
-                    moyennes,
-                    labels=labels,
-                    autopct='%1.1f%%',
-                    startangle=90,
-                    colors=colors,
-                    shadow=True,
-                    explode=[0.05] * len(moyennes),
-                    textprops={'fontsize': 12, 'fontweight': 'bold'}
-                )
+            # Titre avec total général SEUL
+            ax.set_title(
+                f'Répartition des Primes\nTotal Général: {sum(totaux):,.0f} DH',
+                fontsize=16, fontweight='bold', pad=20
+            )
 
-                # Améliorer l'apparence du texte
-                for autotext in autotexts:
-                    autotext.set_color('white')
-                    autotext.set_fontweight('bold')
+            # Plus de légende détaillée !
+            ax.legend(labels, loc='center left', bbox_to_anchor=(1, 0.5), fontsize=10)
 
-                ax.set_title('Répartition des Primes Moyennes',
-                             fontsize=16, fontweight='bold', pad=20)
+            plt.tight_layout()
+            st.pyplot(fig_pr)
 
-                plt.tight_layout()
-                st.pyplot(fig_pr)
-                return fig_pr
-
-                st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
+            return fig_pr
 
         # Appel de la fonction
         fig_pr = plot_pie_primes_styled(df)
-
 
         # Fusion Paie & Informations Générales
         if uploaded_file:
@@ -434,7 +383,6 @@ def run(df, xls, uploaded_file):
 
                             absences_Section = df_merged_filtered.groupby('Section')[
                                 'Taux d\'absence (%)'].mean().sort_values(ascending=False)
-
 
                             absences_Section = df_merged.groupby('Section')['Taux d\'absence (%)'].mean().sort_values(
                                 ascending=False)
@@ -536,36 +484,26 @@ def run(df, xls, uploaded_file):
 
         import io
 
-        primes = ['Prime de rendement', "Prime d'ancienneté", 'Prime de poste', 'Prime de Salissure']
-        primes = [col for col in primes if col in df.columns]
-
-        if 'Noms & Prénoms' in df.columns and primes:
-            df['Primes totales'] = df[primes].sum(axis=1)
-            top_5 = df[['Noms & Prénoms', 'Primes totales']].sort_values(
-                by='Primes totales', ascending=False).head(5)
-        else:
-            top_5 = pd.DataFrame(columns=['Noms & Prénoms', 'Primes totales'])
-
         # === 1️⃣ DataFrame Statistiques ===
         df_stats = pd.DataFrame({
             'Indicateur': [
                 'Nombre total des heures supplémentaires',
                 'Salaire total des HS',
-                'Prime de rendement moyenne',
-                'Prime d\'ancienneté moyenne',
-                'Prime de poste moyenne',
-                'Prime de salissure moyenne',
-                'Total des primes',
+                'Total Prime de rendement',
+                'Total Prime d\'ancienneté',
+                'Total Prime de poste',
+                'Total Prime de salissure',
+                'Total de toutes les primes',
                 ''
 
             ],
             'Valeur': [
                 total_nb_HS,
                 total_HS,
-                prime_rendement_moy,
-                prime_anciennete_moy,
-                prime_poste_moy,
-                prime_salisseur_moy,
+                total_prime_rendement,
+                total_prime_anciennete,
+                total_prime_poste,
+                total_prime_salisseur,
                 total_primes,
                 ''
             ]
@@ -603,14 +541,12 @@ def run(df, xls, uploaded_file):
             ]
         })
         df_stats = pd.concat([df_stats, df_stats_abs], ignore_index=True)
+
         # === 2️⃣ Excel en mémoire ===
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
             df.to_excel(writer, sheet_name='Données brutes', index=False)
-            ssheet_name = 'Statistiques'
-            top_5.to_excel(writer, sheet_name=ssheet_name, index=False, startrow=0, startcol=0)
-            startcol_prime = len(top_5.columns) + 3
-            df_stats.to_excel(writer, sheet_name=ssheet_name, index=False, startrow=0, startcol=startcol_prime)
+            df_stats.to_excel(writer, sheet_name='Statistiques', index=False)
 
             # Feuille Graphiques
             workbook = writer.book
@@ -657,8 +593,5 @@ def run(df, xls, uploaded_file):
             file_name='rapport_paie.xlsx',
             mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
-
-
-
 
     process_paie_data(df, uploaded_file)
