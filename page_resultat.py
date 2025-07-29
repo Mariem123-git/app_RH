@@ -292,35 +292,186 @@ def run(df):
     df_stats = pd.DataFrame([stats])
     df_stats = pd.DataFrame([stats])  # ✅ Corrigé
 
-    # 🟢 -- Sauvegarder le camembert --
-    img_camembert = io.BytesIO()
-    if values:
-        fig, ax = plt.subplots()
-        ax.pie(values, labels=labels, autopct='%1.1f%%', startangle=140, colors=plt.cm.Paired.colors)
-        ax.axis('equal')
-        ax.set_title("Répartition Avances & Prêts")
-        st.pyplot(fig)
-        fig.savefig(img_camembert, format='png')
-        img_camembert.seek(0)
-    import numpy as np
-    # 🟢 -- Sauvegarder l’histogramme --
-    img_hist = io.BytesIO()
-    if 'salaire net' in df.columns:
-        sal_net_series = pd.to_numeric(df['salaire net'], errors='coerce').dropna()
-        sal_net_series = sal_net_series[sal_net_series >= 3000]
+   import io
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+import streamlit as st
 
-        if not sal_net_series.empty:
-            nbins = 15
-            hist_data, bin_edges = np.histogram(sal_net_series, bins=nbins)
-            fig_hist, ax_hist = plt.subplots()
-            ax_hist.hist(sal_net_series, bins=nbins, color='#4facfe', edgecolor='black')
-            ax_hist.set_title('Distribution des Salaires Nets ≥ 3000 DH')
-            ax_hist.set_xlabel('Salaire Net (DH)')
-            ax_hist.set_ylabel('Effectif')
-            st.pyplot(fig_hist)
-            fig_hist.savefig(img_hist, format='png')
-            img_hist.seek(0)
+# 🟢 -- Graphique séparé pour les AVANCES --
+img_avances = io.BytesIO()
+# Supposons que vous avez une colonne 'avances' dans votre DataFrame
+if 'avances' in df.columns:
+    avances_data = pd.to_numeric(df['avances'], errors='coerce').dropna()
+    avances_data = avances_data[avances_data > 0]  # Exclure les valeurs nulles
+    
+    if not avances_data.empty:
+        # Calculer les statistiques
+        total_avances = avances_data.sum()
+        nb_beneficiaires = len(avances_data)
+        moyenne_avances = avances_data.mean()
+        
+        # Créer des tranches logiques pour les avances
+        tranches_avances = ['0-500 DH', '500-1000 DH', '1000-2000 DH', '2000+ DH']
+        counts_avances = [
+            len(avances_data[(avances_data > 0) & (avances_data <= 500)]),
+            len(avances_data[(avances_data > 500) & (avances_data <= 1000)]),
+            len(avances_data[(avances_data > 1000) & (avances_data <= 2000)]),
+            len(avances_data[avances_data > 2000])
+        ]
+        
+        fig_avances, ax_avances = plt.subplots()
+        colors_avances = ['#ff9999', '#66b3ff', '#99ff99', '#ffcc99']
+        ax_avances.pie(counts_avances, labels=tranches_avances, autopct='%1.1f%%', 
+                      startangle=90, colors=colors_avances)
+        ax_avances.axis('equal')
+        ax_avances.set_title(f"Répartition des Avances\nTotal: {total_avances:,.0f} DH | Moyenne: {moyenne_avances:,.0f} DH")
+        st.pyplot(fig_avances)
+        fig_avances.savefig(img_avances, format='png', dpi=300, bbox_inches='tight')
+        img_avances.seek(0)
 
+# 🟢 -- Graphique séparé pour les PRÊTS --
+img_prets = io.BytesIO()
+if 'prets' in df.columns:  # ou 'prêts' selon votre nomenclature
+    prets_data = pd.to_numeric(df['prets'], errors='coerce').dropna()
+    prets_data = prets_data[prets_data > 0]
+    
+    if not prets_data.empty:
+        # Calculer les statistiques
+        total_prets = prets_data.sum()
+        nb_beneficiaires_prets = len(prets_data)
+        moyenne_prets = prets_data.mean()
+        
+        # Créer des tranches logiques pour les prêts (généralement plus élevés)
+        tranches_prets = ['0-2000 DH', '2000-5000 DH', '5000-10000 DH', '10000+ DH']
+        counts_prets = [
+            len(prets_data[(prets_data > 0) & (prets_data <= 2000)]),
+            len(prets_data[(prets_data > 2000) & (prets_data <= 5000)]),
+            len(prets_data[(prets_data > 5000) & (prets_data <= 10000)]),
+            len(prets_data[prets_data > 10000])
+        ]
+        
+        fig_prets, ax_prets = plt.subplots()
+        colors_prets = ['#ffb3ba', '#bae1ff', '#baffc9', '#ffffba']
+        ax_prets.pie(counts_prets, labels=tranches_prets, autopct='%1.1f%%', 
+                    startangle=90, colors=colors_prets)
+        ax_prets.axis('equal')
+        ax_prets.set_title(f"Répartition des Prêts\nTotal: {total_prets:,.0f} DH | Moyenne: {moyenne_prets:,.0f} DH")
+        st.pyplot(fig_prets)
+        fig_prets.savefig(img_prets, format='png', dpi=300, bbox_inches='tight')
+        img_prets.seek(0)
+
+# 🟢 -- Histogramme OUVRIERS (Salaire équivalent basé sur jours travaillés) --
+img_hist_ouvriers = io.BytesIO()
+if 'Salaire net a paye' in df.columns and 'categorie' in df.columns and 'jours_travailles' in df.columns:
+    # Filtrer les ouvriers
+    ouvriers_df = df[df['categorie'].str.lower().str.contains('ouvrier', na=False)]
+    
+    if not ouvriers_df.empty:
+        # Utiliser le "Salaire net a paye" qui est le montant réellement perçu
+        ouvriers_df = ouvriers_df.copy()
+        ouvriers_df['salaire_paye_num'] = pd.to_numeric(ouvriers_df['Salaire net a paye'], errors='coerce')
+        ouvriers_df['jours_num'] = pd.to_numeric(ouvriers_df['jours_travailles'], errors='coerce')
+        
+        # Calculer le salaire journalier réel
+        ouvriers_df['salaire_journalier'] = ouvriers_df['salaire_paye_num'] / ouvriers_df['jours_num']
+        
+        # Calculer le salaire équivalent 30 jours (capacité de gain mensuel)
+        ouvriers_df['salaire_equivalent_30j'] = ouvriers_df['salaire_journalier'] * 30
+        
+        # Filtrer les données valides et >= SMIC
+        sal_ouvriers = ouvriers_df['salaire_equivalent_30j'].dropna()
+        sal_ouvriers = sal_ouvriers[sal_ouvriers >= 3000]
+        
+        if not sal_ouvriers.empty:
+            fig_hist_ouv, ax_hist_ouv = plt.subplots(figsize=(10, 6))
+            
+            # Créer des bins logiques à partir du SMIC
+            bins = np.arange(3000, sal_ouvriers.max() + 500, 500)
+            
+            ax_hist_ouv.hist(sal_ouvriers, bins=bins, color='#4facfe', edgecolor='black', alpha=0.7)
+            ax_hist_ouv.axvline(x=3000, color='red', linestyle='--', linewidth=2, label='SMIC (3000 DH)')
+            ax_hist_ouv.axvline(x=sal_ouvriers.mean(), color='orange', linestyle='-', linewidth=2, 
+                               label=f'Moyenne: {sal_ouvriers.mean():.0f} DH')
+            
+            ax_hist_ouv.set_title('Distribution des Salaires Ouvriers\n(Capacité de gain équivalent 30 jours)')
+            ax_hist_ouv.set_xlabel('Salaire Net Équivalent 30j (DH)')
+            ax_hist_ouv.set_ylabel('Nombre d\'Ouvriers')
+            ax_hist_ouv.legend()
+            ax_hist_ouv.grid(True, alpha=0.3)
+            
+            # Ajouter des infos contextuelles
+            textstr = f'Basé sur: Salaire net à payer / Jours travaillés × 30\nÉchantillon: {len(sal_ouvriers)} ouvriers'
+            props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+            ax_hist_ouv.text(0.02, 0.98, textstr, transform=ax_hist_ouv.transAxes, fontsize=9,
+                            verticalalignment='top', bbox=props)
+            
+            st.pyplot(fig_hist_ouv)
+            fig_hist_ouv.savefig(img_hist_ouvriers, format='png', dpi=300, bbox_inches='tight')
+            img_hist_ouvriers.seek(0)
+
+# 🟢 -- Histogramme EMPLOYÉS --
+img_hist_employes = io.BytesIO()
+if 'salaire net' in df.columns and 'categorie' in df.columns:
+    # Filtrer les employés
+    employes_df = df[df['categorie'].str.lower().str.contains('employe|employé', na=False)]
+    
+    if not employes_df.empty:
+        employes_df = employes_df.copy()
+        # Utiliser le "salaire net" pour les employés (salaire contractuel mensuel)
+        employes_df['salaire_net_num'] = pd.to_numeric(employes_df['salaire net'], errors='coerce')
+        
+        # Pour les employés, prendre le salaire tel quel (généralement mensuel)
+        sal_employes = employes_df['salaire_net_num'].dropna()
+        sal_employes = sal_employes[sal_employes >= 3000]
+        
+        if not sal_employes.empty:
+            fig_hist_emp, ax_hist_emp = plt.subplots(figsize=(10, 6))
+            
+            # Bins adaptés aux salaires d'employés (généralement plus élevés)
+            bins = np.arange(3000, sal_employes.max() + 1000, 1000)
+            
+            ax_hist_emp.hist(sal_employes, bins=bins, color='#2ecc71', edgecolor='black', alpha=0.7)
+            ax_hist_emp.axvline(x=3000, color='red', linestyle='--', linewidth=2, label='SMIC (3000 DH)')
+            ax_hist_emp.axvline(x=sal_employes.mean(), color='orange', linestyle='-', linewidth=2, 
+                               label=f'Moyenne: {sal_employes.mean():.0f} DH')
+            
+            ax_hist_emp.set_title('Distribution des Salaires Employés\n(Salaire contractuel mensuel)')
+            ax_hist_emp.set_xlabel('Salaire Net Contractuel (DH)')
+            ax_hist_emp.set_ylabel('Nombre d\'Employés')
+            ax_hist_emp.legend()
+            ax_hist_emp.grid(True, alpha=0.3)
+            
+            # Ajouter des infos contextuelles
+            textstr = f'Basé sur: Salaire net contractuel\nÉchantillon: {len(sal_employes)} employés'
+            props = dict(boxstyle='round', facecolor='lightgreen', alpha=0.5)
+            ax_hist_emp.text(0.02, 0.98, textstr, transform=ax_hist_emp.transAxes, fontsize=9,
+                            verticalalignment='top', bbox=props)
+            
+            st.pyplot(fig_hist_emp)
+            fig_hist_emp.savefig(img_hist_employes, format='png', dpi=300, bbox_inches='tight')
+            img_hist_employes.seek(0)
+
+# 🟢 -- Statistiques récapitulatives --
+st.subheader("📊 Résumé des Statistiques")
+
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    if 'avances_data' in locals() and not avances_data.empty:
+        st.metric("Total Avances", f"{total_avances:,.0f} DH", f"{nb_beneficiaires} bénéficiaires")
+
+with col2:
+    if 'prets_data' in locals() and not prets_data.empty:
+        st.metric("Total Prêts", f"{total_prets:,.0f} DH", f"{nb_beneficiaires_prets} bénéficiaires")
+
+with col3:
+    if 'sal_ouvriers' in locals() and not sal_ouvriers.empty:
+        st.metric("Salaire Moyen Ouvriers", f"{sal_ouvriers.mean():.0f} DH", f"{len(sal_ouvriers)} personnes")
+
+with col4:
+    if 'sal_employes' in locals() and not sal_employes.empty:
+        st.metric("Salaire Moyen Employés", f"{sal_employes.mean():.0f} DH", f"{len(sal_employes)} personnes")
     # ✅ Générer le Excel avec plusieurs feuilles
     # -----------------------------
     output = io.BytesIO()
