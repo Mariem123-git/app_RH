@@ -273,12 +273,12 @@ def run(df):
             fig_avances, ax_avances = plt.subplots(figsize=(10, 8))
 
             # Créer des tranches logiques
-            tranches = ['0-1000 DH', '1000-3000 DH', '3000-5000 DH', '5000+ DH']
+            tranches = ['0-500 DH', '500-1000 DH', '1000-2000 DH', '2000+ DH']
             counts = [
-                len(avances_data[(avances_data > 0) & (avances_data <= 1000)]),
-                len(avances_data[(avances_data > 1000) & (avances_data <= 3000)]),
-                len(avances_data[(avances_data > 3000) & (avances_data <= 5000)]),
-                len(avances_data[avances_data > 5000])
+                len(avances_data[(avances_data > 0) & (avances_data <= 500)]),
+                len(avances_data[(avances_data > 500) & (avances_data <= 1000)]),
+                len(avances_data[(avances_data > 1000) & (avances_data <= 2000)]),
+                len(avances_data[avances_data > 2000])
             ]
 
             # Filtrer les tranches non vides
@@ -299,6 +299,10 @@ def run(df):
 
                 ax_avances.set_title(
                     f'Répartition des Avances sur Salaire\n'
+                    f'Total: {avances_data.sum():,.0f} DH | '
+                    f'Employés concernés: {len(avances_data)} | '
+                    f'Moyenne: {avances_data.mean():,.0f} DH',
+                    fontsize=14, weight='bold', pad=20
                 )
 
                 st.subheader("📊 Répartition des Avances")
@@ -342,6 +346,10 @@ def run(df):
 
                 ax_prets.set_title(
                     f'Répartition des Remboursements de Prêts\n'
+                    f'Total: {prets_data.sum():,.0f} DH | '
+                    f'Employés concernés: {len(prets_data)} | '
+                    f'Moyenne: {prets_data.mean():,.0f} DH',
+                    fontsize=14, weight='bold', pad=20
                 )
 
                 st.subheader("📊 Répartition des Prêts")
@@ -369,6 +377,20 @@ def run(df):
                 alpha=0.7,
                 linewidth=1
             )
+
+            # Ajouter les nombres d'effectifs à l'intérieur des barres
+            for i, (count, patch) in enumerate(zip(n, patches)):
+                if count > 0:  # Afficher seulement si la barre n'est pas vide
+                    # Position du texte au centre de la barre
+                    x_pos = (bins[i] + bins[i + 1]) / 2
+                    y_pos = count / 2
+
+                    ax_hist_net.text(x_pos, y_pos, f'{int(count)}',
+                                     ha='center', va='center',
+                                     fontsize=10, fontweight='bold',
+                                     color='white',
+                                     bbox=dict(boxstyle='round,pad=0.2',
+                                               facecolor='black', alpha=0.7))
 
             # Lignes de référence
             ax_hist_net.axvline(x=3000, color='red', linestyle='--', linewidth=3,
@@ -420,6 +442,20 @@ def run(df):
                 alpha=0.7,
                 linewidth=1
             )
+
+            # Ajouter les nombres d'effectifs à l'intérieur des barres
+            for i, (count, patch) in enumerate(zip(n, patches)):
+                if count > 0:  # Afficher seulement si la barre n'est pas vide
+                    # Position du texte au centre de la barre
+                    x_pos = (bins[i] + bins[i + 1]) / 2
+                    y_pos = count / 2
+
+                    ax_hist_brut.text(x_pos, y_pos, f'{int(count)}',
+                                      ha='center', va='center',
+                                      fontsize=10, fontweight='bold',
+                                      color='white',
+                                      bbox=dict(boxstyle='round,pad=0.2',
+                                                facecolor='black', alpha=0.7))
 
             # Lignes de référence
             ax_hist_brut.axvline(x=salaire_brut_data.mean(), color='orange', linestyle='-', linewidth=3,
@@ -496,7 +532,3 @@ def run(df):
         file_name="rapport_salaire_complet.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-
-
-
-
